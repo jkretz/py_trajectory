@@ -28,10 +28,13 @@ for file_name in os.listdir(ipath_icon):
         # get all variables in files
         var_list_all = icon_data.variables.keys()
         # var_list = var_list_all
-        var_list = ['thb_s', 'u', 'pres', 'geopot']
+        var_list = ['thb_s', 'u']
         var_in = {}
+        var_info = {}
         for var in var_list:
             var_in[var] = icon_data.variables[var][:]
+            for meta in 'units', 'long_name':
+                var_info[var, meta] = icon_data.variables[var].getncattr(meta)
         first_read = False
         continue
 
@@ -51,8 +54,22 @@ flight_track = list(zip(lat_track, lon_track))
 # number of points during flight
 num_track = track.shape[0]
 
+# open dataset
 f_out = Dataset('test.nc', 'w', format='NETCDF4')
 f_out.createDimension('track', len(flight_track))
+
+# write lat/lon to file
+lat_out = f_out.createVariable('lat_track', 'f4', 'track')
+lat_out.units = "degrees_north"
+lat_out.long_name = 'lat_flight_track'
+lon_out = f_out.createVariable('lon_track', 'f4', 'track')
+lon_out.units = "degrees_east"
+lon_out.long_name = 'lon_flight_track'
+
+lat_out[:] = lat_track
+lon_out[:] = lon_track
+
+# apply kdtree decomposition
 tree = spatial.cKDTree(list(zip(lat_grid, lon_grid)))
 
 var_out = {}
@@ -64,7 +81,8 @@ for var in var_list:
     if len(var_in[var].shape) == 2:
         # create variable in output file
         var_out[var] = f_out.createVariable(str(var), 'f4', 'track')
-
+        var_out[var].units = var_info[var, 'units']
+        var_out[var].long_name = var_info[var, 'long_name']
         # select variable on flight track
         for np, pts in enumerate(flight_track):
             idx = tree.query(pts)[1]
@@ -81,7 +99,8 @@ for var in var_list:
 
         # create variable in output file
         var_out[var] = f_out.createVariable(str(var), 'f4', ('height', 'track'))
-
+        var_out[var].units = var_info[var, 'units']
+        var_out[var].long_name = var_info[var, 'long_name']
         # select variable on flight track
         for np, pts in enumerate(flight_track):
             idx = tree.query(pts)[1]
@@ -89,5 +108,7 @@ for var in var_list:
 
     else:
         exit('strange variable dimension; exit')
+
+f_out.close()
 
 exit()
