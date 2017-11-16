@@ -42,7 +42,7 @@ flight_track = list(zip(lat_track, lon_track))
 
 first_read = True
 
-ipath_icon = "/home_local/jkretzs/work_new/ac3/xcut/plane_model_trajectory/data/icon_data/"
+ipath_icon = "/home_local/jkretzs/work_new/ac3/xcut/plane_model_trajectory/data/icon_data/data_test"
 for file_name in sorted(os.listdir(ipath_icon)):
 
     # read in files
@@ -54,8 +54,7 @@ for file_name in sorted(os.listdir(ipath_icon)):
     # get all variables in files
     var_list_all = icon_data.variables.keys()
     # var_list = var_list_all
-    var_list = ['time', 'thb_s', 'qc']
-    #var_list = ['time', 'thb_s']
+    var_list = ['time', 'pres', 'temp', 'qi', 'qc', 'qv']
 
     # read data for the first time
     if first_read:
@@ -96,13 +95,21 @@ if "time" in var_list:
 f_out = Dataset('test.nc', 'w', format='NETCDF4')
 f_out.createDimension('time', len(flight_track))
 
-# write time and lat/lon  of flight track to file
-# time
+# write time of flight track to file
+
 time_out = f_out.createVariable('time', 'f4', 'time')
 time_out.standard_name = "time"
 time_out.units = "seconds since "+ts_base.strftime('%Y-%-m-%-d %H:%M:%S')
 time_out.calendar = "proleptic_gregorian"
 time_out[:] = t_track_ts
+
+# create new vertical grid and write to file
+p_level_inter = np.linspace(50000., 102000., num=53, dtype=float)
+f_out.createDimension('p_level', len(p_level_inter))
+p_out_grid = f_out.createVariable('p_level', 'f4', 'p_level')
+p_out_grid.units = 'Pa'
+p_out_grid.long_name = 'pressure_grid'
+p_out_grid[:] = p_level_inter
 
 # lat/lon/p
 lat_out = f_out.createVariable('lat_track', 'f4', 'time')
@@ -128,8 +135,9 @@ for i_p, pts in enumerate(flight_track):
     idx[i_p] = tree.query(pts)[1]
     idt[i_p] = np.int(np.argmin(np.abs(var_in["time_icon_ts"]-t_track_ts[i_p])))
 
+# set up some variables for the writing data to file
 var_out = {}
-first_w3d = True
+p_icon = (var_in['pres'])[idt, :, idx]
 
 # used ICON timestep into output
 var = "time_ICON"
@@ -141,6 +149,7 @@ for i_p in range(0,len(flight_track)):
     var_out[var][i_p] = var_in["time_icon_ts"][idt[i_p]]
 
 for var in var_list:
+
 
     # skip time variable
     if var == 'time':
@@ -154,25 +163,22 @@ for var in var_list:
         var_out[var].long_name = var_info[var, 'long_name']
 
         # select variable on flight track
-        for i_p in range(0,len(flight_track)):
+        for i_p in range(0, len(flight_track)):
             var_out[var][i_p] = (var_in[var])[idt[i_p], idx[i_p]]
 
     # 3D-variable
     elif len(var_in[var].shape) == 3:
 
-        # create vertical dimension if it is the first time to write it to file
-        num_vertical = var_in[var].shape[1]
-        if first_w3d:
-            f_out.createDimension('height', num_vertical)
-            first_w3d = False
+        if var != 'pres':
+            # create variable in output file
+            var_out[var] = f_out.createVariable(str(var), 'f4', ('p_level', 'time'))
+            var_out[var].units = var_info[var, 'units']
+            var_out[var].long_name = var_info[var, 'long_name']
 
-        # create variable in output file
-        var_out[var] = f_out.createVariable(str(var), 'f4', ('height', 'time'))
-        var_out[var].units = var_info[var, 'units']
-        var_out[var].long_name = var_info[var, 'long_name']
-        # select variable on flight track
-        for i_p in range(0, len(flight_track)):
-            var_out[var][:, i_p] = (var_in[var])[idt[i_p], :, idx[i_p]]
+            # select variable on flight track and interpolate it onto new vertical grid
+            var_pre_inter = (var_in[var])[idt, :, idx]
+            for i_p in range(0, len(flight_track)):
+                var_out[var][:, i_p] = np.interp(p_level_inter, p_icon[i_p, :], var_pre_inter[i_p, :])
 
     else:
         exit('strange variable dimension; exit')
