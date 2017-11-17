@@ -4,13 +4,15 @@ import numpy as np
 
 class ProData:
 
-    def __init__(self, data, var_icon):
+    def __init__(self, data, var_icon, dim_vert):
 
         self.data = data
         len_track = len(self.data.flight_data['track'])
 
         self.idx, self.idt = self.kd_tree()
-        self.var_out = self.icon_select(var_icon, len_track)
+        self.var_out, self.p_level = self.icon_select(var_icon, len_track, dim_vert)
+
+        del self.data
 
     # apply kd-tree decomposition and find gridpoints and timesteps closest to flight track
     def kd_tree(self):
@@ -31,12 +33,12 @@ class ProData:
 
         return idx, idt
 
-    def icon_select(self, var_icon, len_track):
+    def icon_select(self, var_icon, len_track, dim_vert):
 
         var_out = {}
 
         # create new vertical grid and select desired pressure data for interpolation
-        num_lev = 53
+        num_lev = dim_vert
         p_level_inter = np.linspace(50000., 102000., num=num_lev, dtype=float)
         pres_tmp = self.data.icon_data['pres'][self.idt, :, self.idx]
 
@@ -65,4 +67,7 @@ class ProData:
             var_out[var] = var_select
             del var_select
 
-        return var_out
+        # select the used ICON timestep
+        var_out['model_time'] = self.data.icon_data['time_ts'][self.idt]
+
+        return var_out, p_level_inter

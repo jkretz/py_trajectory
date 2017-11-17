@@ -48,6 +48,8 @@ class ImportData:
 
         # combine lat/lon into flight track
         self.flight_data["track"] = list(zip(plane_input["lat"], plane_input["lon"]))
+        self.flight_data["lat"] = plane_input["lat"]
+        self.flight_data["lon"] = plane_input["lon"]
 
         # convert timestep of flight track into common timestamp
         ts_track = datetime.datetime(int(self.date[0:4]), int(self.date[4:6]), int(self.date[6::]), 0, 0, 0)
