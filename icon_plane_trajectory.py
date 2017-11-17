@@ -1,5 +1,6 @@
 import datetime
 from data_import import ImportData
+from pro_input import ProData
 
 # set time of flight
 date_flight = '20170531'
@@ -15,8 +16,15 @@ ipath_plane = '/home_local/jkretzs/work_new/ac3/xcut/plane_model_trajectory/data
 ipath_icon = "/home_local/jkretzs/work_new/ac3/xcut/plane_model_trajectory/data/icon_data/20170531"
 
 # list of variables to be used
-var_icon = ['thb_s']
+var_icon = ['thb_s', 'temp']
+#var_icon = ['temp']
+#var_icon = ['thb_s']
 
 # call import data class
-ImportData(date_flight, ts_base_date, ipath_plane, ipath_icon, var_icon)
+data = ImportData(date_flight, ts_base_date, ipath_plane, ipath_icon, var_icon)
 
+# process data
+ProData(data, var_icon)
+
+
+exit()

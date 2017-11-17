@@ -32,6 +32,7 @@ class ImportData:
     # read flight track information from input file
     def plane_data_import(self):
 
+        ifile_plane = []
         # find appropriate file for chosen day
         for file in os.listdir(self.ipath_plane):
                 if fnmatch.fnmatch(file, '*'+self.date+'*.asc'):
@@ -60,8 +61,11 @@ class ImportData:
 
         icon_timestep = []
         icon_timestep_file = []
+        icon_timestamp = []
 
         for file_name in sorted(os.listdir(self.ipath_icon)):
+
+            ifile_icon = []
 
             # read only *.nc file
             if file_name.endswith(".nc"):
@@ -82,22 +86,23 @@ class ImportData:
             icon_timestep_convert.append((num2date(time, icon_timestamp) - self.base_date).total_seconds())
 
         # get index of first ICON timestep in flight track
-        t_dif_start = (icon_timestep_convert-self.flight_data["time_new_ts"][0])
+        t_dif_start = (np.array(icon_timestep_convert)-self.flight_data["time_new_ts"][0])
         nt_dif_start = np.argmin(np.abs(t_dif_start))
-        if t_dif_start[nt_dif_start] < 0:
+        if t_dif_start[nt_dif_start] > 0:
             nt_dif_start = nt_dif_start - 1
             if nt_dif_start < 0:
                 raise ValueError('First timestep of flight track not in ICON files, exiting.')  # is not working
 
         # get index of last ICON timestep in flight track
-        t_dif_end = (icon_timestep_convert-self.flight_data["time_new_ts"][-1])
+        t_dif_end = (np.array(icon_timestep_convert)-self.flight_data["time_new_ts"][-1])
         nt_dif_end = np.argmin(np.abs(t_dif_end))
-        if t_dif_end[nt_dif_end] > 0:
+        if t_dif_end[nt_dif_end] < 0:
             nt_dif_end = nt_dif_end + 1
             if nt_dif_end > len(icon_timestep):
                 raise ValueError('Last timestep of flight track not in ICON files, exiting.')  # is not working
 
         self.icon_files = icon_timestep_file[nt_dif_start:nt_dif_end]
+        self.icon_data['time_ts'] = np.array(icon_timestep_convert[nt_dif_start:nt_dif_end])
 
     # read in all the data from the ICON files
     def read_icon_data(self):
@@ -105,6 +110,7 @@ class ImportData:
         first_read = True
         for file_name in self.icon_files:
 
+            ifile_icon = []
             # read only *.nc file
             if file_name.endswith(".nc"):
                 ifile_icon = os.path.join(self.ipath_icon, file_name)
