@@ -14,8 +14,8 @@ from output_data import DataOutNetcdf
 date_flights = ['20170531']
 
 day_range = True
-date_flight_start = '20170531'
-date_flight_end = '20170602'
+date_flight_start = '20170616'
+date_flight_end = '20170630'
 
 # list of variables to be used
 var_icon = ['thb_s', 'sou_s', 'sob_s', 'qv', 'qc', 'qi', 'qr', 'qs', 'temp', 'tqv', 'tqc', 'tqi', 'tqr', 'tqs', ]
@@ -80,5 +80,7 @@ for date_flight in date_flights:
 
         # write data to netcdf file
         DataOutNetcdf(in_data, pro_data, dim_vert, var_icon, ofile , opath)
+        
+        del in_data, pro_data
 
 exit('FINISH: icon_plane_trajectory.py')
