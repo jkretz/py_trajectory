@@ -3,13 +3,13 @@ from netCDF4 import Dataset
 
 class DataOutNetcdf:
 
-    def __init__(self, data, pro_data, dim_vert, var_icon):
+    def __init__(self, data, pro_data, dim_vert, var_icon, ofile, opath):
 
-        self.write_nc(dim_vert, data, pro_data, var_icon)
+        self.write_nc(dim_vert, data, pro_data, var_icon, ofile, opath)
 
-    def write_nc(self, dim_vert, data, pro_data, var_icon):
+    def write_nc(self, dim_vert, data, pro_data, var_icon, ofile, opath):
 
-        f_out = Dataset('test.nc', 'w', format='NETCDF4')
+        f_out = Dataset(opath+ofile, 'w', format='NETCDF4')
         flight_data = data.flight_data
         dim_time = len(flight_data['time_new_ts'])
 

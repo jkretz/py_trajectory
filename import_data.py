@@ -8,9 +8,8 @@ from netCDF4 import Dataset, num2date
 
 class ImportData:
 
-    def __init__(self, date, ts_base_date, ipath_plane, ipath_icon, var_icon):
+    def __init__(self, date, ts_base_date, ifile_plane, ipath_icon, var_icon):
 
-        self.ipath_plane = ipath_plane
         self.ipath_icon = ipath_icon
         self.date = date
         self.base_date = ts_base_date
@@ -25,22 +24,16 @@ class ImportData:
         self.icon_data_info = {}
         self.icon_files = []
 
-        self.plane_data_import()
+        self.plane_data_import(ifile_plane)
         self.find_icon_files()
         self.read_icon_data()
 
     # read flight track information from input file
-    def plane_data_import(self):
-
-        ifile_plane = []
-        # find appropriate file for chosen day
-        for file in os.listdir(self.ipath_plane):
-                if fnmatch.fnmatch(file, '*'+self.date+'*.asc'):
-                    ifile_plane = self.ipath_plane+file
+    def plane_data_import(self,ifile_plane):
 
         # read data
         plane_input = {}
-        input_file = pd.read_csv(ifile_plane, delim_whitespace=True).values
+        input_file = pd.read_csv(str(ifile_plane), delim_whitespace=True).values
         plane_input["time"] = input_file[:, 0]
         plane_input["lon"] = input_file[:, 2]
         plane_input["lat"] = input_file[:, 3]
@@ -70,8 +63,10 @@ class ImportData:
             ifile_icon = []
 
             # read only *.nc file
-            if file_name.endswith(".nc"):
+            if file_name.startswith("NWP_LAM_DOM01"):
                 ifile_icon = os.path.join(self.ipath_icon, file_name)
+            else:
+                continue
 
             # now import timesteps and timestamp
             icon_data = Dataset(ifile_icon)
