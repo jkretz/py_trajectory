@@ -51,9 +51,10 @@ class DataOutNetcdf:
                                            long_name=data.icon_data_info[var, 'long_name'])
 
             if len(pro_data.var_out[var].shape) == 2:
-                self.create_variable_entry(f_out, var, ('p_level', 'time'), pro_data.var_out[var],
+                self.create_variable_entry(f_out, var, ('time', 'p_level'), pro_data.var_out[var],
                                            units=data.icon_data_info[var, 'units'],
                                            long_name=data.icon_data_info[var, 'long_name'])
+
 
     # maybe this is a little too much
     @staticmethod

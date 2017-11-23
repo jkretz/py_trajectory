@@ -57,9 +57,9 @@ class ProData:
                 var_pre_inter = self.data.icon_data[var][self.idt, :, self.idx]
 
                 # interpolate to new gird
-                var_select = np.zeros((num_lev, len_track))
+                var_select = np.zeros((len_track, num_lev))
                 for i_p in range(0, len_track):
-                    var_select[:, i_p] = np.interp(p_level_inter, pres_tmp[i_p, :], var_pre_inter[i_p, :])
+                    var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[i_p, :], var_pre_inter[i_p, :])
 
             else:
                 exit('strange variable dimension; exit')
