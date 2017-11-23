@@ -1,0 +1,5 @@
+.gitignore
+*.nc
+.*
+*~
+__pycache__/
