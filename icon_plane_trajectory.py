@@ -13,18 +13,18 @@ from output_data import DataOutNetcdf
 
 date_flights = ['20170531']
 
-day_range = True
-date_flight_start = '20170616'
+day_range = False
+date_flight_start = '20170531'
 date_flight_end = '20170630'
 
 # list of variables to be used
-var_icon = ['thb_s', 'sou_s', 'sob_s', 'qv', 'qc', 'qi', 'qr', 'qs', 'temp', 'tqv', 'tqc', 'tqi', 'tqr', 'tqs', ]
+var_icon = ['thb_s', 'thu_s', 'sou_s', 'sou_t', 'sob_s', 'qv', 'qc', 'qi', 'qr', 'qs', 'temp', 'tqv', 'tqc', 'tqi', 'tqr', 'tqs']
 
 # number of output vertical levels
 dim_vert = 100
 
 # path that contains airplane data 
-ipath_plane = '/pf/b/b380425/icon/postpro/icon_acloud/flight_track/P5/'
+ipath_plane = '/pf/b/b380425/icon/postpro/icon_acloud/flight_track/all/'
 
 # path that contains ICON data
 ipath_icon_base = '/work/bb1037/b380425/ICON_AC3/output/'
