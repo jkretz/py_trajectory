@@ -45,10 +45,13 @@ for date_flight in date_flights:
 
     # loop through flight track files
     for ifile_plane in ifiles_plane:
-        ofile = "ICON_"+ifile_plane[62:79]+".nc"
+
+        ifile_plane_split = ifiles_plane[0].split('/')[-1].split('_')
+        ofile = 'ICON_'+ifile_plane_split[1]+'_'+ifile_plane_split[2]+'_'+ifile_plane_split[3]+'.nc'
 
         # call import data class
-        in_data = ImportData(date_flight, ts_base_date, ifile_plane, ipath_icon, settings_in['var_icon'])
+        in_data = ImportData(date_flight, ts_base_date, ifile_plane, ipath_icon, settings_in['var_icon'],
+                             settings_in['icon_file_string'])
 
         # process data
         pro_data = ProData(in_data, settings_in['var_icon'], settings_in['dim_vert'])

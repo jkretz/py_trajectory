@@ -1,6 +1,5 @@
 import pandas as pd
 import os
-import fnmatch
 import datetime
 import numpy as np
 from netCDF4 import Dataset, num2date
@@ -8,11 +7,12 @@ from netCDF4 import Dataset, num2date
 
 class ImportData:
 
-    def __init__(self, date, ts_base_date, ifile_plane, ipath_icon, var_icon):
+    def __init__(self, date, ts_base_date, ifile_plane, ipath_icon, var_icon, file_string):
 
         self.ipath_icon = ipath_icon
         self.date = date
         self.base_date = ts_base_date
+        self.file_string = file_string
 
         # hard code always needed variables and added desired ones
         self.icon_vars = ['time', 'pres']
@@ -29,7 +29,7 @@ class ImportData:
         self.read_icon_data()
 
     # read flight track information from input file
-    def plane_data_import(self,ifile_plane):
+    def plane_data_import(self, ifile_plane):
 
         # read data
         plane_input = {}
@@ -60,10 +60,10 @@ class ImportData:
 
         for file_name in sorted(os.listdir(self.ipath_icon)):
 
-            ifile_icon = []
+            # ifile_icon = []
 
             # read only *.nc file
-            if file_name.startswith("NWP_LAM_DOM01"):
+            if file_name.startswith(self.file_string):
                 ifile_icon = os.path.join(self.ipath_icon, file_name)
             else:
                 continue
