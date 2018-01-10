@@ -55,7 +55,6 @@ class DataOutNetcdf:
                                            units=data.icon_data_info[var, 'units'],
                                            long_name=data.icon_data_info[var, 'long_name'])
 
-
     # maybe this is a little too much
     @staticmethod
     def create_dimension_entry(file, name, dimsize):
