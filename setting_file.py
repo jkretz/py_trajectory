@@ -17,13 +17,13 @@ settings_in['range_stop'] = '20170630'
 file_start_string = 'ICON_AC3_DOM0'
 
 # select domain to process
-domain = 1
+domain = 2
 
 settings_in['icon_file_string'] = file_start_string+str(domain)
 
 # list of variables to be used
 # settings_in['var_icon'] = ['thb_s', 'thu_s', 'sou_s', 'sou_t', 'sob_s', 'qv', 'qc', 'qi', 'qr', 'qs', 'temp', 'tqv',
-#                            'tqc', 'tqi', 'tqr', 'tqs']
+#                             'tqc', 'tqi', 'tqr', 'tqs']
 
 settings_in['var_icon'] = ['thb_s', 'temp']
 
