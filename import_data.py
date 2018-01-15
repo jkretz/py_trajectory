@@ -3,8 +3,10 @@ import os
 import datetime
 import numpy as np
 from netCDF4 import Dataset, num2date
+from scipy import spatial
 
 
+# import class for aircraft data
 class ImportPlane:
 
     def __init__(self, base_date, date, plane_file_list, ipath_icon, file_string):
@@ -12,11 +14,13 @@ class ImportPlane:
         self.base_date = base_date
         self.flight_data = []
         self.icon_file_range = []
+        self.icon_timestep_range = []
+        self.plane_file_list = plane_file_list
 
-        t_min_max = np.empty(2*len(plane_file_list))
+        t_min_max = np.empty(2*len(self.plane_file_list))
 
         # import plane data for all flights of a day
-        for n_file, ifile_plane in enumerate(plane_file_list):
+        for n_file, ifile_plane in enumerate(self.plane_file_list):
             out_flight, t_min_max[n_file*2], t_min_max[(n_file*2)+1] = self.plane_data_import(date, ifile_plane)
             self.flight_data.append(out_flight)
 
@@ -93,15 +97,17 @@ class ImportPlane:
 
         icon_files = file_for_time[nt_dif_start:nt_dif_end]
         self.icon_file_range = sorted(set(icon_files))
+        self.icon_timestep_range = np.array(icon_timestep_convert[nt_dif_start:nt_dif_end])
 
 
+# import class for ICON data
 class ImportICON:
 
-    def __init__(self, ipath_icon, icon_files, var_icon):
+    def __init__(self, ipath_icon, var_icon, plane_data):
 
         self.ipath_icon = ipath_icon
-        self.icon_files = icon_files
-        self.icon_data = {}
+        self.plane_data = plane_data
+        self.icon_data = []
 
         # hard code always needed variables and added desired ones
         self.icon_vars = ['time', 'pres']
@@ -110,44 +116,95 @@ class ImportICON:
         # some arrays needed later
         self.icon_data_info = {}
 
-        self.read_icon_data()
+        # import ICON grid and metadata and apply kd-tree decomposition
+        icon_latlon = self.meta_import()
 
+        # import ICON data on flight track
+        self.icon_import(icon_latlon)
 
-    # read in all the data from the ICON files
-    def read_icon_data(self):
+    def meta_import(self):
 
-        first_read = True
-        for file_name in self.icon_files:
+        # import ICON dataset
+        ifile_icon = os.path.join(self.ipath_icon, self.plane_data.icon_file_range[0])
+        icon_data_in = Dataset(ifile_icon)
 
-            print(file_name)
+        # get grid information and transform into deg
+        icon_latlon = {}
+        rad2deg = 180./np.pi
+        icon_latlon['lat_grid'] = np.array(icon_data_in.variables['clat'])*rad2deg
+        icon_latlon['lon_grid'] = np.array(icon_data_in.variables['clon'])*rad2deg
 
-            ifile_icon = []
-            # read only *.nc file
-            if file_name.endswith(".nc"):
-                ifile_icon = os.path.join(self.ipath_icon, file_name)
-            icon_data_in = Dataset(ifile_icon)
+        # get variable meta data
+        for var in self.icon_vars:
+            for meta in 'units', 'long_name':
+                if var == 'time' and meta == 'long_name':
+                    continue
+                self.icon_data_info[var, meta] = icon_data_in.variables[var].getncattr(meta)
 
-            # read data for the first time to get the metadata only once
-            if first_read:
+        return icon_latlon
 
-                # get grid information and transform into deg
-                rad2deg = 180./np.pi
-                self.icon_data['lat_grid'] = np.array(icon_data_in.variables['clat'])*rad2deg
-                self.icon_data['lon_grid'] = np.array(icon_data_in.variables['clon'])*rad2deg
+    # apply kd-tree decomposition and find gridpoints and timesteps closest to flight track
+    def kd_tree(self, track, plane_time, icon_latlon):
 
-                # loop through all the variables
-                for var in self.icon_vars:
-                    self.icon_data[var] = icon_data_in.variables[var][:]
-                    for meta in 'units', 'long_name':
-                        if var == 'time' and meta == 'long_name':
-                            continue
-                        self.icon_data_info[var, meta] = icon_data_in.variables[var].getncattr(meta)
+        # apply kd-tree decomposition
+        tree = spatial.cKDTree(list(zip(icon_latlon['lat_grid'], icon_latlon['lon_grid'])))
 
-                first_read = False
-                continue
+        icon_timestep = []
+        for file_name in self.plane_data.icon_file_range:
+            ifile_icon = os.path.join(self.ipath_icon, file_name)
+            icon_data = Dataset(ifile_icon)
+            icon_timestep = np.concatenate((icon_timestep, icon_data.variables["time"][:]), axis=0)
 
-            # now append all the other timesteps
+        # some empty arrays
+        idx = np.zeros(len(track), dtype=np.int_)
+        idt = np.zeros(len(track), dtype=np.int_)
+
+        # find gridpoints and timesteps closest to flight track
+        for i_p, pts in enumerate(track):
+            idx[i_p] = tree.query(pts)[1]
+            idt[i_p] = np.int(np.argmin(np.abs(self.plane_data.icon_timestep_range - plane_time[i_p])))
+
+        return idx, idt
+
+    def icon_import(self, icon_latlon):
+
+        # loop through flights of chose day and only import data along the flight-track
+        for n_flight in range(len(self.plane_data.flight_data)):
+
+            icon_data_flight = {}
+
+            # apply kd-tree decomposition to get the ICON grid indices along the flight track
+            plane_time = self.plane_data.flight_data[n_flight]['time_new_ts']
+            idx, idt = self.kd_tree(self.plane_data.flight_data[n_flight]['track'], plane_time, icon_latlon)
+
             for var in self.icon_vars:
-                self.icon_data[var] = np.concatenate((self.icon_data[var], icon_data_in.variables[var][:]), axis=0)
+                first_read = True
+                icon_data_all = []
+                for n_file, file_name in enumerate(self.plane_data.icon_file_range):
+                    ifile_icon = os.path.join(self.ipath_icon, file_name)
+                    icon_data_in = Dataset(ifile_icon).variables[var][:]
+                    if first_read:
+                        icon_data_all = icon_data_in
+                        first_read = False
+                    else:
+                        icon_data_all = np.concatenate((icon_data_all, icon_data_in), axis=0)
 
-            del icon_data_in
+                if var == 'time':
+                    icon_data_inter = np.zeros(len(idx), dtype=np.float_)
+                    for i_p in range(0, len(idx)):
+                        icon_data_inter[i_p] = (num2date(icon_data_all[idt[i_p]], self.icon_data_info['time', 'units'])
+                                                - self.plane_data.base_date).total_seconds()
+                else:
+                    dim_var = len(icon_data_all.shape)
+                    if dim_var == 2:
+                        icon_data_inter = np.zeros(len(idx), dtype=np.float_)
+                        for i_p in range(0, len(idx)):
+                            icon_data_inter[i_p] = icon_data_all[idt[i_p], idx[i_p]]
+                    elif dim_var == 3:
+                        icon_data_inter = np.zeros((icon_data_all.shape[1], len(idx)), dtype=np.float_)
+                        for i_p in range(0, len(idx)):
+                            icon_data_inter[:, i_p] = icon_data_all[idt[i_p], :, idx[i_p]]
+
+                icon_data_flight[var] = icon_data_inter
+                del icon_data_inter, icon_data_all
+            self.icon_data.append(icon_data_flight)
