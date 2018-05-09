@@ -86,8 +86,12 @@ class DataOutNetcdf:
                         len_track = (icon_data.icon_data[f][var]).shape[-1]
                         var_select = np.zeros((len_track, dim_vert))
                         for i_p in range(0, dim_time):
-                            var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
-                                                           (icon_data.icon_data[f][var])[:, i_p])
+                            if var in ['swflxclr','lwflxclr','swflxall','lwflxall']:
+                                var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
+                                                               (icon_data.icon_data[f][var])[:-1, i_p])
+                            else:
+                                var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
+                                                               (icon_data.icon_data[f][var])[:, i_p])
                         create_variable_entry(f_out, var, ('time', 'p_level'), var_select,
                                               units=icon_data.icon_data_info[var, 'units'],
                                               long_name=icon_data.icon_data_info[var, 'long_name'])
