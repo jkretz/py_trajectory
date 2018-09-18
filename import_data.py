@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 from netCDF4 import Dataset, num2date
 from scipy import spatial
+import pickle
 
 
 # import class for aircraft data
@@ -103,11 +104,12 @@ class ImportPlane:
 # import class for ICON data
 class ImportICON:
 
-    def __init__(self, ipath_icon, var_icon, plane_data):
+    def __init__(self, ipath_icon, var_icon, plane_data, opath):
 
         self.ipath_icon = ipath_icon
         self.plane_data = plane_data
         self.icon_data = []
+        self.opath = opath
 
         # hard code always needed variables and added desired ones
         self.icon_vars = ['time', 'pres']
@@ -116,7 +118,7 @@ class ImportICON:
         # some arrays needed later
         self.icon_data_info = {}
 
-        # import ICON grid and metadata and apply kd-tree decomposition
+        # import ICON grid and metadata
         icon_latlon = self.meta_import()
 
         # import ICON data on flight track
@@ -146,8 +148,13 @@ class ImportICON:
     # apply kd-tree decomposition and find gridpoints and timesteps closest to flight track
     def kd_tree(self, track, plane_time, icon_latlon):
 
-        # apply kd-tree decomposition
-        tree = spatial.cKDTree(list(zip(icon_latlon['lat_grid'], icon_latlon['lon_grid'])))
+        kdtree_save_file = '.kdtree_save.p'
+        # apply kd-tree decomposition and save it to a file to speed things up when doing it the next time
+        if os.path.isfile(self.opath+kdtree_save_file):
+            tree = pickle.load(open(self.opath+kdtree_save_file, "rb"))
+        else:
+            tree = spatial.cKDTree(list(zip(icon_latlon['lat_grid'], icon_latlon['lon_grid'])))
+            pickle.dump(tree, open(self.opath+kdtree_save_file, "wb"))
 
         icon_timestep = []
         for file_name in self.plane_data.icon_file_range:

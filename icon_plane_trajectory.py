@@ -6,6 +6,10 @@ from import_data import ImportICON, ImportPlane
 from output_data import DataOutNetcdf
 
 
+kdtree_save_file = '.kdtree_save.p'
+if os.path.isfile(settings_in['opath']+kdtree_save_file):
+    os.system('rm '+settings_in['opath']+kdtree_save_file)
+
 # set day range for multiple day
 date_flights = []
 if settings_in['lmulday']:
@@ -49,7 +53,7 @@ for date_flight in date_flights:
     plane_data = ImportPlane(ts_base_date, date_flight, plane_file_list, ipath_icon, settings_in['icon_file_string'])
 
     # now import ICON data
-    in_data = ImportICON(ipath_icon, settings_in['var_icon'], plane_data)
+    in_data = ImportICON(ipath_icon, settings_in['var_icon'], plane_data, settings_in['opath'])
 
     # write sampled data to file. For 3D data, interpolate on a new vertical grid
     DataOutNetcdf(plane_data, in_data)
