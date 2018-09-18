@@ -11,7 +11,7 @@ class DataOutNetcdf:
         opath = settings_in['opath']
 
         # vertical grid for interpolation
-        p_level_inter = np.linspace(50000., 102000., num=dim_vert, dtype=float)
+        p_level_inter = np.linspace(50000., 103500., num=dim_vert, dtype=float)
 
         def create_dimension_entry(file, name, dimsize):
             file.createDimension(name, dimsize)
@@ -86,12 +86,14 @@ class DataOutNetcdf:
                         len_track = (icon_data.icon_data[f][var]).shape[-1]
                         var_select = np.zeros((len_track, dim_vert))
                         for i_p in range(0, dim_time):
-                            if var in ['swflxclr','lwflxclr','swflxall','lwflxall']:
+                            if var in ['swflxclr', 'lwflxclr', 'swflxall', 'lwflxall']:
                                 var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
                                                                (icon_data.icon_data[f][var])[:-1, i_p])
                             else:
                                 var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
                                                                (icon_data.icon_data[f][var])[:, i_p])
+                            var_select[i_p, :] = np.where(p_level_inter < icon_data.icon_data[f]['pres_sfc'][i_p],
+                                                          var_select[i_p, :], np.nan)
                         create_variable_entry(f_out, var, ('time', 'p_level'), var_select,
                                               units=icon_data.icon_data_info[var, 'units'],
                                               long_name=icon_data.icon_data_info[var, 'long_name'])

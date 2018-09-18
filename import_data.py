@@ -112,7 +112,7 @@ class ImportICON:
         self.opath = opath
 
         # hard code always needed variables and added desired ones
-        self.icon_vars = ['time', 'pres']
+        self.icon_vars = ['time', 'pres', 'pres_sfc']
         self.icon_vars = np.concatenate((self.icon_vars, var_icon))
 
         # some arrays needed later
