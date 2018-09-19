@@ -74,7 +74,7 @@ class DataOutNetcdf:
 
             # write all the other variables to file. For profiles, linearly interpolate on new grid
             for var in icon_data.icon_vars:
-                if var in ['time', 'pres', 'pres_sfc']:
+                if var in ['time', 'pres']:
                     continue
                 else:
                     dim_var = len(icon_data.icon_data[f][var].shape)
@@ -90,8 +90,7 @@ class DataOutNetcdf:
                             if var in ['swflxclr', 'lwflxclr', 'swflxall', 'lwflxall']:
                                 var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
                                                                (icon_data.icon_data[f][var])[:-1, i_p])
-                                # var_select_p[i_p] = np.interp(plane_data.flight_data[f]['p']*100, pres_tmp[:, i_p],
-                                #                               (icon_data.icon_data[f][var])[:-1, i_p])
+                                var_select_p[i_p] = np.interp((plane_data.flight_data[f]['p'])[i_p]*100, pres_tmp[:, i_p], (icon_data.icon_data[f][var])[:-1, i_p])
                             else:
                                 var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
                                                                (icon_data.icon_data[f][var])[:, i_p])
@@ -104,6 +103,6 @@ class DataOutNetcdf:
                                               units=icon_data.icon_data_info[var, 'units'],
                                               long_name=icon_data.icon_data_info[var, 'long_name'])
                         # output of values at flight altitude
-                        create_variable_entry(f_out, var+'_alt', 'time', var_select_p,
+                        create_variable_entry(f_out, var+'_falt', 'time', var_select_p,
                                               units=icon_data.icon_data_info[var, 'units'],
                                               long_name=icon_data.icon_data_info[var, 'long_name'])

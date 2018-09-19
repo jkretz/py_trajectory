@@ -189,7 +189,11 @@ class ImportICON:
                 icon_data_all = []
                 for n_file, file_name in enumerate(self.plane_data.icon_file_range):
                     ifile_icon = os.path.join(self.ipath_icon, file_name)
-                    icon_data_in = Dataset(ifile_icon).variables[var][:]
+                    if var in ('v_10m', 'u_10m', 'rh_2m', 't_2m'):
+                        icon_data_in = Dataset(ifile_icon).variables[var][:, 0, :]
+                    else:
+                        icon_data_in = Dataset(ifile_icon).variables[var][:]
+
                     if first_read:
                         icon_data_all = icon_data_in
                         first_read = False
