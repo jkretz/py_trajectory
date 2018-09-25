@@ -73,6 +73,8 @@ class DataOutNetcdf:
                                   calendar='proleptic_gregorian')
 
             # write all the other variables to file. For profiles, linearly interpolate on new grid
+            var_rad_3d = ['swflx_up', 'swflx_dn', 'lwflx_up', 'lwflx_dn', 'swflx_up_clr', 'swflx_dn_clr',
+                          'lwflx_up_clr', 'lwflx_dn_clr', 'trsolall']
             for var in icon_data.icon_vars:
                 if var in ['time', 'pres']:
                     continue
@@ -87,14 +89,16 @@ class DataOutNetcdf:
                         var_select = np.zeros((len_track, dim_vert))
                         var_select_p = np.zeros(len_track)
                         for i_p in range(0, dim_time):
-                            if var in ['swflxclr', 'lwflxclr', 'swflxall', 'lwflxall']:
+                            if var in var_rad_3d:
                                 var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
                                                                (icon_data.icon_data[f][var])[:-1, i_p])
-                                var_select_p[i_p] = np.interp((plane_data.flight_data[f]['p'])[i_p]*100, pres_tmp[:, i_p], (icon_data.icon_data[f][var])[:-1, i_p])
+                                var_select_p[i_p] = np.interp((plane_data.flight_data[f]['p'])[i_p]*100,
+                                                              pres_tmp[:, i_p], (icon_data.icon_data[f][var])[:-1, i_p])
                             else:
                                 var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p],
                                                                (icon_data.icon_data[f][var])[:, i_p])
-                                var_select_p[i_p] = np.interp((plane_data.flight_data[f]['p'])[i_p]*100, pres_tmp[:, i_p], (icon_data.icon_data[f][var])[:, i_p])
+                                var_select_p[i_p] = np.interp((plane_data.flight_data[f]['p'])[i_p]*100,
+                                                              pres_tmp[:, i_p], (icon_data.icon_data[f][var])[:, i_p])
 
                             var_select[i_p, :] = np.where(p_level_inter < icon_data.icon_data[f]['pres_sfc'][i_p],
                                                           var_select[i_p, :], np.nan)
