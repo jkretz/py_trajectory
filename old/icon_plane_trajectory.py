@@ -6,9 +6,9 @@ from import_data import ImportICON, ImportPlane
 from output_data import DataOutNetcdf
 
 
-kdtree_save_file = '.kdtree_save.p'
-if os.path.isfile(settings_in['opath']+kdtree_save_file):
-    os.system('rm '+settings_in['opath']+kdtree_save_file)
+# kdtree_save_file = '.kdtree_save.p'
+# if os.path.isfile(settings_in['opath']+kdtree_save_file):
+#     os.system('rm '+settings_in['opath']+kdtree_save_file)
 
 # set day range for multiple day
 date_flights = []
