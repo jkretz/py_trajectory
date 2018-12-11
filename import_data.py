@@ -25,6 +25,7 @@ class ImportPlane:
         self.var_plane['lat'] = f_plane.variables['Lat'][:]
         self.var_plane['lon'] = f_plane.variables['Lon'][:]
         self.var_plane['time'] = datempl.num2date(f_plane.variables['time'][:])
+        self.var_plane['time_old'] = f_plane.variables['time'][:]
         self.var_plane['p'] = f_plane.variables['Pres'][:]
         self.var_plane['plane'] = f_plane.variables['Airc'][:]
 
@@ -53,10 +54,10 @@ class ImportICON:
 
         base_date = base_date.replace(tzinfo=pytz.UTC)
         self.opath = opath
-        self.var_list = var_list
+        self.var_list = ['time', 'pres', 'pres_sfc'] + var_list
 
         idt, idx, num_timestep = self.icon_trajectory(plane_data.icon_files, plane_data.var_plane, base_date)
-        self.var_icon = self.query_var_icon(plane_data.icon_files, idt, idx, num_timestep)
+        self.var_icon, self.var_icon_info = self.query_var_icon(plane_data.icon_files, idt, idx, num_timestep)
 
     def icon_trajectory(self, icon_files, var_plane, base_date):
 
@@ -97,12 +98,29 @@ class ImportICON:
 
     def query_var_icon(self, icon_files, idt, idx, num_timestep):
         var_icon = {}
+        icon_data_info = {}
 
         for var in self.var_list:
-            print(var)
             var_icon_in = {}
             for nf, file in enumerate(icon_files):
                 var_icon_in[nf] = np.squeeze(Dataset(file).variables[var])
+
+                # get varibale metadata
+                if nf == 0:
+                    for meta in 'units', 'long_name':
+                        if var == 'time' and meta == 'long_name':
+                            continue
+                        icon_data_info[var, meta] = Dataset(file).variables[var].getncattr(meta)
+
+            if var == 'time':
+                var_in = np.zeros(len(idt))
+                for p, time in enumerate(idt):
+                    nf = int(np.floor(time/num_timestep))
+                    ts = int((time/num_timestep-nf) * num_timestep)
+                    if num_timestep == 1:
+                        var_in[p] = var_icon_in[nf]
+                    else:
+                        var_in[p] = var_icon_in[nf][ts]
 
             if len(var_icon_in[0].shape) == 1:
                 var_in = np.zeros(len(idx))
@@ -125,4 +143,4 @@ class ImportICON:
 
             var_icon[var] = var_in
 
-        return var_icon
+        return var_icon, icon_data_info

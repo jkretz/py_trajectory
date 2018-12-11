@@ -1,9 +1,9 @@
 import datetime
 import os
-import fnmatch
+import pytz
 from setting_file import settings_in
 from import_data import ImportPlane, ImportICON
-# from output_data import DataOutNetcdf
+from output_data import DataOutNetcdf
 
 # set day range for multiple day
 date_flights = []
@@ -28,6 +28,8 @@ for date_flight in date_flights:
 
     # check if ICON data exists for chosen day
     ts_base_date = datetime.datetime(int(date_flight[0:4]), int(date_flight[4:6]), int(date_flight[6::]), 0, 0, 0)
+    ts_base_date = ts_base_date.replace(tzinfo=pytz.UTC)
+
     ipath_icon = settings_in['ipath_icon_base'] + ts_base_date.strftime('%Y%m%d')
     if not (os.path.isdir(ipath_icon)):
         print('WARNING: No ICON data for day: '+date_flight)
@@ -39,37 +41,6 @@ for date_flight in date_flights:
     # import ICON data
     in_data = ImportICON(settings_in['var_icon'], plane_data, ts_base_date, settings_in['opath'])
 
-# # loop through days
-# for date_flight in date_flights:
-#
-#     print('')
-#     print('Processing: '+date_flight)
-#
-#     ts_base_date = datetime.datetime(int(date_flight[0:4]), int(date_flight[4:6]), int(date_flight[6::]), 0, 0, 0)
-#     plane_file_list = []
-#
-#     # check if flight track file exists for chosen day
-#     for file in os.listdir(settings_in['ipath_plane']):
-#         if fnmatch.fnmatch(file, '*'+date_flight+'*.asc'):
-#             plane_file_list.append(settings_in['ipath_plane']+file)
-#     if not plane_file_list:
-#         print('WARNING: No flight track file found for day: '+date_flight)
-#         continue
-#
-#     # check if ICON data exists for chosen day
-#     ipath_icon = settings_in['ipath_icon_base'] + (ts_base_date - datetime.timedelta(days=1)).strftime('%Y%m%d')
-#     if not (os.path.isdir(ipath_icon)):
-#         print('WARNING: No ICON data for day: '+date_flight)
-#         continue
-#
-#     # import plane data and find the necessary ICON files
-#     plane_data = ImportPlane(ts_base_date, date_flight, plane_file_list, ipath_icon, settings_in['icon_file_string'])
-#
-#     # now import ICON data
-#     in_data = ImportICON(ipath_icon, settings_in['var_icon'], plane_data, settings_in['opath'])
-#
-#     # write sampled data to file. For 3D data, interpolate on a new vertical grid
-#     DataOutNetcdf(plane_data, in_data)
-
+    DataOutNetcdf(date_flight, ts_base_date, plane_data, in_data)
 
 exit('FINISH: icon_plane_trajectory.py')

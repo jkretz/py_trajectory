@@ -22,13 +22,13 @@ settings_in['domain'] = 1
 settings_in['icon_file_string'] = file_start_string+str(settings_in['domain'])
 
 # list of variables to be used
-# settings_in['var_icon'] = ['thb_s', 'thu_s', 'sou_s', 'sou_t', 'sob_s', 'qv', 'qc', 'qi', 'temp', 'tqv',
-#                           'tqc', 'tqi', 'albdif', 'u',
-#                            'v', 'geopot', 'fr_seaice', 'fr_glac', 'rh_2m', 't_2m', 'u_10m', 'v_10m' ,'swflx_up',
-#                            'swflx_dn', 'lwflx_up', 'lwflx_dn', 'swflx_up_clr', 'swflx_dn_clr',
-#                            'lwflx_up_clr', 'lwflx_dn_clr', 'swflx_up_sfc_clr', 'swflx_dn_sfc_clr', 'lwflx_up_sfc_clr',
-#                            'lwflx_dn_sfc_clr']
-settings_in['var_icon'] = ['thb_s', 'qs', 'rh_2m']
+settings_in['var_icon'] = ['thb_s', 'thu_s', 'sou_s', 'sou_t', 'sob_s', 'qv', 'qc', 'qi', 'temp', 'tqv',
+                          'tqc', 'tqi', 'albdif', 'u',
+                           'v', 'geopot', 'fr_seaice', 'fr_glac', 'rh_2m', 't_2m', 'u_10m', 'v_10m', 'swflx_up',
+                           'swflx_dn', 'lwflx_up', 'lwflx_dn', 'swflx_up_clr', 'swflx_dn_clr',
+                           'lwflx_up_clr', 'lwflx_dn_clr', 'swflx_up_sfc_clr', 'swflx_dn_sfc_clr', 'lwflx_up_sfc_clr',
+                           'lwflx_dn_sfc_clr']
+
 
 # number of output vertical levels
 settings_in['dim_vert'] = 100
