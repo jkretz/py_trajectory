@@ -50,11 +50,12 @@ class ImportPlane:
 
 class ImportICON:
 
-    def __init__(self, var_list, plane_data, base_date, opath):
+    def __init__(self, var_list, plane_data, base_date, opath, num_sample):
 
         base_date = base_date.replace(tzinfo=pytz.UTC)
         self.opath = opath
         self.var_list = ['time', 'pres', 'pres_sfc'] + var_list
+        self.num_sample = num_sample
 
         idt, idx, num_timestep = self.icon_trajectory(plane_data.icon_files, plane_data.var_plane, base_date)
         self.var_icon, self.var_icon_info = self.query_var_icon(plane_data.icon_files, idt, idx, num_timestep)
@@ -82,8 +83,15 @@ class ImportICON:
             for time in time_file:
                 time_icon.append(time.replace(tzinfo=pytz.UTC))
 
+        # average grid size
+        grid_size = 2.4
+        # earth's radius
+        re = 6371.0
+        # sample radius
+        rs = 20.
+
         track = list(zip(var_plane['lat'], var_plane['lon']))
-        idx = np.zeros(len(track), dtype=np.int_)
+        idx = np.squeeze(np.zeros((self.num_sample, len(track)), dtype=np.int_))
         idt = np.zeros(len(track), dtype=np.int_)
 
         for i_p, pts in enumerate(zip(var_plane['time'], track)):
@@ -92,7 +100,32 @@ class ImportICON:
             for date in time_icon:
                 timedif.append(np.abs((date-base_date).total_seconds() - time_day))
             idt[i_p] = np.argmin(timedif)
-            idx[i_p] = tree.query(pts[1])[1]
+
+            if self.num_sample <= 1:
+                idx[i_p] = tree.query(pts[1])[1]
+            else:
+                idx[0, i_p] = tree.query(pts[1])[1]
+
+                ns = 1
+                infini_stop = 0
+                while ns < self.num_sample:
+                    lats = np.degrees(2*rs/re * np.linspace(-0.5, 0.5, int(rs/grid_size)+1))
+                    pdf_y = np.cos((np.pi/2.) * np.linspace(-1., 1., int(rs/grid_size)+1))**2
+                    lat_sample = np.random.choice(pts[1][0] + lats, p=pdf_y/sum(pdf_y))
+
+                    lons = np.degrees(2*rs/(re*np.cos(np.radians(lat_sample))) * np.linspace(-0.5, 0.5, int(rs/grid_size)+1))
+                    pdf_x = np.cos((np.pi/2.) * np.linspace(-1., 1., int(rs/grid_size)+1))**2
+                    lon_sample = np.random.choice(pts[1][1] + lons, p=pdf_x/sum(pdf_x))
+
+                    idx_sample = tree.query((lat_sample, lon_sample))[1]
+                    if idx_sample not in idx[:, i_p]:
+                        idx[ns, i_p] = idx_sample
+                        ns += 1
+                        infini_stop = 0
+                    else:
+                        infini_stop += 1
+                        if infini_stop >= self.num_sample*100:
+                            exit('Infinity loop detected. Increase sample radius')
 
         return idt, idx, num_timestep
 
@@ -101,6 +134,7 @@ class ImportICON:
         icon_data_info = {}
 
         for var in self.var_list:
+            print(var)
             var_icon_in = {}
             for nf, file in enumerate(icon_files):
                 var_icon_in[nf] = np.squeeze(Dataset(file).variables[var])
@@ -123,23 +157,29 @@ class ImportICON:
                         var_in[p] = var_icon_in[nf][ts]
 
             if len(var_icon_in[0].shape) == 1:
-                var_in = np.zeros(len(idx))
+                var_in = np.zeros((self.num_sample, max(idx.shape)))
             elif len(var_icon_in[0].shape) == 2:
-                var_in = np.zeros((var_icon_in[0].shape[:-1][0], len(idx)))
+                var_in = np.zeros((self.num_sample, var_icon_in[0].shape[:-1][0], max(idx.shape)))
 
-            for p, loctime in enumerate(zip(idx, idt)):
-                nf = int(np.floor(loctime[1] / num_timestep))
-                ts = int((loctime[1] / num_timestep - nf) * num_timestep)
-                if num_timestep == 1:
-                    if len(var_icon_in[0].shape) == 1:
-                        var_in[p] = np.squeeze(var_icon_in[nf][[loctime[0]]])
-                    elif len(var_icon_in[0].shape) == 2:
-                        var_in[:, p] = np.squeeze(var_icon_in[nf][:, [loctime[0]]])
+            for ns in np.arange(self.num_sample):
+                if self.num_sample == 1:
+                    idx_sample = idx
                 else:
-                    if len(var_icon_in[0].shape) == 1:
-                        var_in[p] = np.squeeze(var_icon_in[nf][ts, [loctime[0]]])
-                    elif len(var_icon_in[0].shape) == 2:
-                        var_in[:, p] = np.squeeze(var_icon_in[nf][ts, :, [loctime[0]]])
+                    idx_sample = idx[ns]
+
+                for p, loctime in enumerate(zip(idx_sample, idt)):
+                    nf = int(np.floor(loctime[1] / num_timestep))
+                    ts = int((loctime[1] / num_timestep - nf) * num_timestep)
+                    if num_timestep == 1:
+                        if len(var_icon_in[0].shape) == 1:
+                            var_in[ns, p] = np.squeeze(var_icon_in[nf][loctime[0]])
+                        elif len(var_icon_in[0].shape) == 2:
+                            var_in[ns, :, p] = np.squeeze(var_icon_in[nf][:, loctime[0]])
+                    else:
+                        if len(var_icon_in[0].shape) == 1:
+                            var_in[p] = np.squeeze(var_icon_in[nf][ts, [loctime[0]]])
+                        elif len(var_icon_in[0].shape) == 2:
+                            var_in[:, p] = np.squeeze(var_icon_in[nf][ts, :, [loctime[0]]])
 
             var_icon[var] = var_in
 

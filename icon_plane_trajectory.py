@@ -39,8 +39,8 @@ for date_flight in date_flights:
     plane_data = ImportPlane(ts_base_date, settings_in['plane_file'], ipath_icon, settings_in['icon_file_string'])
 
     # import ICON data
-    in_data = ImportICON(settings_in['var_icon'], plane_data, ts_base_date, settings_in['opath'])
+    in_data = ImportICON(settings_in['var_icon'], plane_data, ts_base_date, settings_in['opath'], settings_in['num_sample'])
 
-    DataOutNetcdf(date_flight, ts_base_date, plane_data, in_data)
+    # DataOutNetcdf(date_flight, ts_base_date, plane_data, in_data)
 
 exit('FINISH: icon_plane_trajectory.py')
