@@ -156,10 +156,17 @@ class ImportICON:
                     else:
                         var_in[p] = var_icon_in[nf][ts]
 
-            if len(var_icon_in[0].shape) == 1:
-                var_in = np.zeros((self.num_sample, max(idx.shape)))
-            elif len(var_icon_in[0].shape) == 2:
-                var_in = np.zeros((self.num_sample, var_icon_in[0].shape[:-1][0], max(idx.shape)))
+            if num_timestep == 1:
+                if len(var_icon_in[0].shape) == 1:
+                    var_in = np.zeros((self.num_sample, max(idx.shape)))
+                elif len(var_icon_in[0].shape) == 2:
+                    var_in = np.zeros((self.num_sample, var_icon_in[0].shape[:-1][0], max(idx.shape)))
+            else:
+                if len(var_icon_in[0].shape) == 2:
+                    var_in = np.zeros((self.num_sample, max(idx.shape)))
+                elif len(var_icon_in[0].shape) == 3:
+                    var_in = np.zeros((self.num_sample, var_icon_in[0].shape[:-1][1], max(idx.shape)))
+
 
             for ns in np.arange(self.num_sample):
                 if self.num_sample == 1:
@@ -176,10 +183,10 @@ class ImportICON:
                         elif len(var_icon_in[0].shape) == 2:
                             var_in[ns, :, p] = np.squeeze(var_icon_in[nf][:, loctime[0]])
                     else:
-                        if len(var_icon_in[0].shape) == 1:
-                            var_in[p] = np.squeeze(var_icon_in[nf][ts, [loctime[0]]])
-                        elif len(var_icon_in[0].shape) == 2:
-                            var_in[:, p] = np.squeeze(var_icon_in[nf][ts, :, [loctime[0]]])
+                        if len(var_icon_in[0].shape) == 2:
+                            var_in[ns, p] = np.squeeze(var_icon_in[nf][ts, [loctime[0]]])
+                        elif len(var_icon_in[0].shape) == 3:
+                            var_in[ns, :, p] = np.squeeze(var_icon_in[nf][ts, :, [loctime[0]]])
 
             var_icon[var] = var_in
 
