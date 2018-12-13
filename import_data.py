@@ -17,6 +17,7 @@ class ImportPlane:
         self.var_plane = {}
         self.plane_data_import(plane_file)
         self.plane_mask_day(base_date)
+        print
         self.icon_files = self.find_icon_files(ipath_icon)
 
     def plane_data_import(self, ifile_plane):
@@ -84,7 +85,7 @@ class ImportICON:
                 time_icon.append(time.replace(tzinfo=pytz.UTC))
 
         # average grid size
-        grid_size = 2.4
+        grid_size = 1.2
         # earth's radius
         re = 6371.0
         # sample radius
@@ -134,7 +135,6 @@ class ImportICON:
         icon_data_info = {}
 
         for var in self.var_list:
-            print(var)
             var_icon_in = {}
             for nf, file in enumerate(icon_files):
                 var_icon_in[nf] = np.squeeze(Dataset(file).variables[var])

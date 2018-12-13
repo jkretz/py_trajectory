@@ -1,6 +1,8 @@
 import datetime
 import os
 import pytz
+from netCDF4 import Dataset
+import matplotlib.dates as datempl
 from setting_file import settings_in
 from import_data import ImportPlane, ImportICON
 from output_data import DataOutNetcdf
@@ -21,6 +23,8 @@ else:
     date_flights.append(settings_in['date'])
 
 # loop through days
+f_plane = Dataset(settings_in['plane_file'])
+plane_time = datempl.num2date(f_plane.variables['time'][:])
 for date_flight in date_flights:
 
     print('')
@@ -34,6 +38,15 @@ for date_flight in date_flights:
     if not (os.path.isdir(ipath_icon)):
         print('WARNING: No ICON data for day: '+date_flight)
         continue
+
+    # Check if there was a flight at that day
+    days = []
+    for ts in plane_time:
+            days.append(ts.date() != ts_base_date.date())
+    if all(days):
+        print('WARNING: No ACLOUD data for day: '+date_flight)
+        continue
+
 
     # import plane data and find the necessary ICON files
     plane_data = ImportPlane(ts_base_date, settings_in['plane_file'], ipath_icon, settings_in['icon_file_string'])
