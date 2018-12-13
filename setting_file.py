@@ -31,7 +31,7 @@ settings_in['icon_file_string'] = file_start_string+str(settings_in['domain'])
 #                            'swflx_dn', 'lwflx_up', 'lwflx_dn', 'swflx_up_clr', 'swflx_dn_clr',
 #                            'lwflx_up_clr', 'lwflx_dn_clr', 'swflx_up_sfc_clr', 'swflx_dn_sfc_clr', 'lwflx_up_sfc_clr',
 #                            'lwflx_dn_sfc_clr']
-settings_in['var_icon'] = ['thb_s']
+settings_in['var_icon'] = ['qc']
 
 # number of output vertical levels
 settings_in['dim_vert'] = 100

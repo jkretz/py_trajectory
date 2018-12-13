@@ -36,6 +36,7 @@ class DataOutNetcdf:
         # write needed dimension
         create_dimension_entry(f_out, 'time', len(icon_data.var_icon['time']))
         create_dimension_entry(f_out, 'p_level', dim_vert)
+        create_dimension_entry(f_out, 'num_sample', icon_data.num_sample)
 
         # get seconds of day
         seconds_day = []
@@ -68,25 +69,26 @@ class DataOutNetcdf:
                 continue
             else:
                 dim_var = len(icon_data.var_icon[var].shape)
-                if dim_var == 1:
-                    create_variable_entry(f_out, var, 'time', icon_data.var_icon[var], units=icon_data.var_icon_info[var, 'units'], long_name=icon_data.var_icon_info[var, 'long_name'])
-                elif dim_var == 2:
+                if dim_var == 2:
+                    create_variable_entry(f_out, var, ('num_sample', 'time'), icon_data.var_icon[var], units=icon_data.var_icon_info[var, 'units'], long_name=icon_data.var_icon_info[var, 'long_name'])
+                elif dim_var == 3:
                     len_track = (icon_data.var_icon[var]).shape[-1]
-                    var_select = np.zeros((len_track, dim_vert))
-                    var_select_p = np.zeros(len_track)
-                    for i_p in range(0, len_track):
-                        if var in var_rad_3d:
-                            var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p], (icon_data.var_icon[var])[:-1, i_p])
-                            var_select_p[i_p] = np.interp((plane_data.var_plane['p'])[i_p]*100, pres_tmp[:, i_p], (icon_data.var_icon[var])[:-1, i_p])
-                        else:
-                            var_select[i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p], (icon_data.var_icon[var])[:, i_p])
-                            var_select_p[i_p] = np.interp((plane_data.var_plane['p'])[i_p]*100, pres_tmp[:, i_p], (icon_data.var_icon[var])[:, i_p])
+                    var_select = np.zeros((icon_data.num_sample, len_track, dim_vert))
+                    var_select_p = np.zeros((icon_data.num_sample, len_track))
+                    for ns in range(icon_data.num_sample):
+                        for i_p in range(len_track):
+                            if var in var_rad_3d:
+                                var_select[ns, i_p, :] = np.interp(p_level_inter, pres_tmp[ns, :, i_p], (icon_data.var_icon[var])[ns, :-1, i_p])
+                                var_select_p[ns, i_p] = np.interp((plane_data.var_plane['p'])[i_p]*100, pres_tmp[ns, :, i_p], (icon_data.var_icon[var])[ns, :-1, i_p])
+                            else:
+                                var_select[ns, i_p, :] = np.interp(p_level_inter, pres_tmp[ns, :, i_p], (icon_data.var_icon[var])[ns, :, i_p])
+                                var_select_p[ns, i_p] = np.interp((plane_data.var_plane['p'])[i_p]*100, pres_tmp[ns, :, i_p], (icon_data.var_icon[var])[ns, :, i_p])
 
-                        var_select[i_p, :] = np.where(p_level_inter < icon_data.var_icon['pres_sfc'][i_p], var_select[i_p, :], np.nan)
+                            var_select[ns, i_p, :] = np.where(p_level_inter < icon_data.var_icon['pres_sfc'][ns, i_p], var_select[ns, i_p, :], np.nan)
 
                     # output of profile
-                    create_variable_entry(f_out, var, ('time', 'p_level'), var_select, units=icon_data.var_icon_info[var, 'units'], long_name=icon_data.var_icon_info[var, 'long_name'])
+                    create_variable_entry(f_out, var, ('num_sample', 'time', 'p_level'), var_select, units=icon_data.var_icon_info[var, 'units'], long_name=icon_data.var_icon_info[var, 'long_name'])
 
                     # output of values at flight altitude
-                    create_variable_entry(f_out, var+'_falt', 'time', var_select_p, units=icon_data.var_icon_info[var, 'units'], long_name=icon_data.var_icon_info[var, 'long_name'])
+                    create_variable_entry(f_out, var+'_falt', ('num_sample', 'time'), var_select_p, units=icon_data.var_icon_info[var, 'units'], long_name=icon_data.var_icon_info[var, 'long_name'])
 
