@@ -1,4 +1,4 @@
-from netCDF4 import Dataset, num2date
+from netCDF4 import Dataset, num2date, MFDataset
 import matplotlib.dates as datempl
 import numpy.ma as ma
 import datetime
@@ -7,7 +7,8 @@ import pytz
 import numpy as np
 import pickle
 from scipy import spatial
-
+import fastloop
+import time as timer
 
 # import class for aircraft data
 class ImportPlane:
@@ -59,7 +60,7 @@ class ImportICON:
         self.num_sample = num_sample
 
         idt, idx, num_timestep, num_file = self.icon_trajectory(plane_data.icon_files, plane_data.var_plane, base_date)
-        self.var_icon, self.var_icon_info = self.query_var_icon(plane_data.icon_files, idt, idx, num_timestep, num_file)
+        self.var_icon, self.var_icon_info = self.query_var_icon(plane_data.icon_files, idt, idx)
 
     def icon_trajectory(self, icon_files, var_plane, base_date):
 
@@ -134,49 +135,57 @@ class ImportICON:
 
         return idt, idx, num_timestep, num_file
 
-    def query_var_icon(self, icon_files, idt, idx, num_timestep, num_file):
+    def query_var_icon(self, icon_files, idt, idx):
+
+        def fastloop_3d(idt_in, idx_in, var_loop):
+            dim_track = len(idt_in)
+            var_out = np.zeros((var_loop.shape[1], dim_track))
+            for ind in range(dim_track):
+                var_out[:, ind] = var_loop[idt_in[ind], :, idx_in[ind]]
+            return var_out
+
+        def fastloop_2d(idt_in, idx_in, var_loop):
+            dim_track = len(idt_in)
+            var_out = np.zeros(dim_track)
+            for ind in range(dim_track):
+                var_out[ind] = var_loop[idt_in[ind], idx_in[ind]]
+            return var_out
+
         var_icon = {}
         icon_data_info = {}
         
         for var in self.var_list:
             print(var)
-            var_icon_in = {}
-            for nf, file in enumerate(icon_files):
-                var_icon_in[nf] = Dataset(file).variables[var]
+            var_icon_in = MFDataset(icon_files).variables[var]
 
-                # get varibale metadata
-                if nf == 0:
-                    for meta in 'units', 'long_name':
-                        if var == 'time' and meta == 'long_name':
-                            continue
-                        icon_data_info[var, meta] = Dataset(file).variables[var].getncattr(meta)
+            for meta in 'units', 'long_name':
+                if var == 'time' and meta == 'long_name':
+                    continue
+                else:
+                    icon_data_info[var, meta] = getattr(var_icon_in, meta)
 
             if var == 'time':
                 var_in = np.zeros(len(idt))
                 for p, time in enumerate(idt):
-                    nf = num_file[time]
-                    ts = time-sum(num_timestep[:nf])
-                    var_in[p] = var_icon_in[nf][ts]
+                    var_in[p] = var_icon_in[time]
+            else:
+                dim_var = len(var_icon_in.shape)
+                if dim_var == 2:
+                    var_in = np.zeros((self.num_sample, len(idt)))
+                elif dim_var == 3:
+                    var_in = np.zeros((self.num_sample, var_icon_in.shape[1], len(idt)))
 
-            if len(var_icon_in[0].shape) == 2:
-                var_in = np.zeros((self.num_sample, max(idx.shape)))
-            elif len(var_icon_in[0].shape) == 3:
-                var_in = np.zeros((self.num_sample, var_icon_in[0].shape[-2], max(idx.shape)))
+                for ns in np.arange(self.num_sample):
+                    if self.num_sample == 1:
+                        idx_sample = idx
+                    else:
+                        idx_sample = idx[ns]
 
+                    if dim_var == 2:
+                        var_in[ns, :] = fastloop_2d(idt, idx_sample, var_icon_in)
+                    elif dim_var == 3:
+                        var_in[ns, :, :] = fastloop_3d(idt, idx_sample, var_icon_in)
 
-            for ns in np.arange(self.num_sample):
-                if self.num_sample == 1:
-                    idx_sample = idx
-                else:
-                    idx_sample = idx[ns]
-
-                for p, loctime in enumerate(zip(idx_sample, idt)):
-                    nf = num_file[loctime[1]]
-                    ts = loctime[1]-sum(num_timestep[:nf])
-                    if len(var_icon_in[0].shape) == 2:
-                        var_in[ns, p] = var_icon_in[nf][ts, loctime[0]]
-                    elif len(var_icon_in[0].shape) == 3:
-                        var_in[ns, :, p] = var_icon_in[nf][ts, :, loctime[0]]
 
             var_icon[var] = var_in
 
