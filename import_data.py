@@ -58,8 +58,8 @@ class ImportICON:
         self.var_list = ['time', 'pres', 'pres_sfc'] + var_list
         self.num_sample = num_sample
 
-        idt, idx, num_timestep = self.icon_trajectory(plane_data.icon_files, plane_data.var_plane, base_date)
-        self.var_icon, self.var_icon_info = self.query_var_icon(plane_data.icon_files, idt, idx, num_timestep)
+        idt, idx, num_timestep, num_file = self.icon_trajectory(plane_data.icon_files, plane_data.var_plane, base_date)
+        self.var_icon, self.var_icon_info = self.query_var_icon(plane_data.icon_files, idt, idx, num_timestep, num_file)
 
     def icon_trajectory(self, icon_files, var_plane, base_date):
 
@@ -77,12 +77,16 @@ class ImportICON:
             pickle.dump(tree, open(self.opath+kdtree_save_file, "wb"))
 
         time_icon = []
-        for ifile_icon in icon_files:
+        num_file = []
+        num_timestep = []
+        for nf, ifile_icon in enumerate(icon_files):
             icon_timestamp = Dataset(ifile_icon).variables["time"].getncattr("units")
             time_file = num2date(Dataset(ifile_icon).variables['time'][:], icon_timestamp)
-            num_timestep = len(time_file)
+#            num_timestep = len(time_file)
             for time in time_file:
                 time_icon.append(time.replace(tzinfo=pytz.UTC))
+                num_file.append(nf)
+            num_timestep.append(len(time_file))
 
         # average grid size
         grid_size = 1.2
@@ -128,16 +132,17 @@ class ImportICON:
                         if infini_stop >= self.num_sample*100:
                             exit('Infinity loop detected. Increase sample radius')
 
-        return idt, idx, num_timestep
+        return idt, idx, num_timestep, num_file
 
-    def query_var_icon(self, icon_files, idt, idx, num_timestep):
+    def query_var_icon(self, icon_files, idt, idx, num_timestep, num_file):
         var_icon = {}
         icon_data_info = {}
-
+        
         for var in self.var_list:
+            print(var)
             var_icon_in = {}
             for nf, file in enumerate(icon_files):
-                var_icon_in[nf] = np.squeeze(Dataset(file).variables[var])
+                var_icon_in[nf] = Dataset(file).variables[var]
 
                 # get varibale metadata
                 if nf == 0:
@@ -149,23 +154,14 @@ class ImportICON:
             if var == 'time':
                 var_in = np.zeros(len(idt))
                 for p, time in enumerate(idt):
-                    nf = int(np.floor(time/num_timestep))
-                    ts = int((time/num_timestep-nf) * num_timestep)
-                    if num_timestep == 1:
-                        var_in[p] = var_icon_in[nf]
-                    else:
-                        var_in[p] = var_icon_in[nf][ts]
+                    nf = num_file[time]
+                    ts = time-sum(num_timestep[:nf])
+                    var_in[p] = var_icon_in[nf][ts]
 
-            if num_timestep == 1:
-                if len(var_icon_in[0].shape) == 1:
-                    var_in = np.zeros((self.num_sample, max(idx.shape)))
-                elif len(var_icon_in[0].shape) == 2:
-                    var_in = np.zeros((self.num_sample, var_icon_in[0].shape[:-1][0], max(idx.shape)))
-            else:
-                if len(var_icon_in[0].shape) == 2:
-                    var_in = np.zeros((self.num_sample, max(idx.shape)))
-                elif len(var_icon_in[0].shape) == 3:
-                    var_in = np.zeros((self.num_sample, var_icon_in[0].shape[:-1][1], max(idx.shape)))
+            if len(var_icon_in[0].shape) == 2:
+                var_in = np.zeros((self.num_sample, max(idx.shape)))
+            elif len(var_icon_in[0].shape) == 3:
+                var_in = np.zeros((self.num_sample, var_icon_in[0].shape[-2], max(idx.shape)))
 
 
             for ns in np.arange(self.num_sample):
@@ -175,18 +171,12 @@ class ImportICON:
                     idx_sample = idx[ns]
 
                 for p, loctime in enumerate(zip(idx_sample, idt)):
-                    nf = int(np.floor(loctime[1] / num_timestep))
-                    ts = int((loctime[1] / num_timestep - nf) * num_timestep)
-                    if num_timestep == 1:
-                        if len(var_icon_in[0].shape) == 1:
-                            var_in[ns, p] = np.squeeze(var_icon_in[nf][loctime[0]])
-                        elif len(var_icon_in[0].shape) == 2:
-                            var_in[ns, :, p] = np.squeeze(var_icon_in[nf][:, loctime[0]])
-                    else:
-                        if len(var_icon_in[0].shape) == 2:
-                            var_in[ns, p] = np.squeeze(var_icon_in[nf][ts, [loctime[0]]])
-                        elif len(var_icon_in[0].shape) == 3:
-                            var_in[ns, :, p] = np.squeeze(var_icon_in[nf][ts, :, [loctime[0]]])
+                    nf = num_file[loctime[1]]
+                    ts = loctime[1]-sum(num_timestep[:nf])
+                    if len(var_icon_in[0].shape) == 2:
+                        var_in[ns, p] = var_icon_in[nf][ts, loctime[0]]
+                    elif len(var_icon_in[0].shape) == 3:
+                        var_in[ns, :, p] = var_icon_in[nf][ts, :, loctime[0]]
 
             var_icon[var] = var_in
 
