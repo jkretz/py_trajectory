@@ -7,8 +7,6 @@ import pytz
 import numpy as np
 import pickle
 from scipy import spatial
-import fastloop
-import time as timer
 
 # import class for aircraft data
 class ImportPlane:
@@ -171,9 +169,9 @@ class ImportICON:
             else:
                 dim_var = len(var_icon_in.shape)
                 if dim_var == 2:
-                    var_in = np.zeros((self.num_sample, len(idt)))
+                    var_in = np.zeros((len(idt), self.num_sample))
                 elif dim_var == 3:
-                    var_in = np.zeros((self.num_sample, var_icon_in.shape[1], len(idt)))
+                    var_in = np.zeros((var_icon_in.shape[1], len(idt), self.num_sample))
 
                 for ns in np.arange(self.num_sample):
                     if self.num_sample == 1:
@@ -182,10 +180,9 @@ class ImportICON:
                         idx_sample = idx[ns]
 
                     if dim_var == 2:
-                        var_in[ns, :] = fastloop_2d(idt, idx_sample, var_icon_in)
+                        var_in[:, ns] = fastloop_2d(idt, idx_sample, var_icon_in)
                     elif dim_var == 3:
-                        var_in[ns, :, :] = fastloop_3d(idt, idx_sample, var_icon_in)
-
+                        var_in[:, :, ns] = fastloop_3d(idt, idx_sample, var_icon_in)
 
             var_icon[var] = var_in
 
