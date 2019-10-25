@@ -58,6 +58,7 @@ class DataOutNetcdf:
         create_variable_entry(f_out, 'time_ICON', 'time', icon_data.var_icon['time'],
                               units='seconds since '+date_flight+' 00:00:00 UTC', long_name='Time in ICON',
                               calendar='proleptic_gregorian')
+        create_variable_entry(f_out, 'plane', 'time', plane_data.var_plane['plane'])
 
         # write all the other variables to file. For profiles, linearly interpolate on new grid
         pres_tmp = icon_data.var_icon['pres']
