@@ -81,9 +81,9 @@ class DataOutNetcdf:
                     for ns in range(icon_data.num_sample):
                         for i_p in range(len_track):
                             if var in var_rad_3d:
-                                var_select[ns, i_p, :] = np.interp(p_level_inter, pres_tmp[:, i_p, ns],
+                                var_select[ns, :, i_p] = np.interp(p_level_inter, pres_tmp[:, i_p, ns],
                                                                    (icon_data.var_icon[var])[:-1, i_p, ns])
-                                var_select_p[ns, i_p] = np.interp((plane_data.var_plane['p'])[i_p]*100, 
+                                var_select_p[ns, i_p] = np.interp((plane_data.var_plane['p'])[i_p]*100,
                                                                   pres_tmp[:, i_p, ns],
                                                                   (icon_data.var_icon[var])[:-1, i_p, ns])
                             else:
