@@ -1,59 +1,15 @@
-import datetime
-import os
-import pytz
-from netCDF4 import Dataset
-import matplotlib.dates as datempl
-from setting_file import settings_in
-from import_data import ImportPlane, ImportICON
-from output_data import DataOutNetcdf
+from import_data import ImportData
+from process_data import ProcessData
 
-# set day range for multiple day
-date_flights = []
-if settings_in['lmulday']:
-    date_flight_start = settings_in['range_start']
-    date_flight_end = settings_in['range_stop']
-    start = datetime.datetime(int(date_flight_start[0:4]), int(date_flight_start[4:6]),
-                              int(date_flight_start[6::]), 0, 0, 0)
-    end = datetime.datetime(int(date_flight_end[0:4]), int(date_flight_end[4:6]), int(date_flight_end[6::]), 0, 0, 0)
+settings = {}
 
-    delta = end - start
-    for i in range(delta.days + 1):
-        date_flights.append((start + datetime.timedelta(days=i)).strftime('%Y%m%d'))
-else:
-    date_flights.append(settings_in['date'])
+settings['plane_path'] = 'data/HALO_flight_15'
+settings['plane_file'] = f'{settings["plane_path"]}/Bahamas_min.csv'
 
-# loop through days
-f_plane = Dataset(settings_in['plane_file'])
-plane_time = datempl.num2date(f_plane.variables['time'][:])
-for date_flight in date_flights:
+settings['icon_path'] = 'data/ICON_data'
+settings['icon_grid_file'] = 'icon_grid_0015_R02B09_DOM01.nc'
+settings['icon_file_base_string'] = 'lam_amaz_cafe_atm'
 
-    print('')
-    print('Processing: '+date_flight)
-
-    # check if ICON data exists for chosen day
-    ts_base_date = datetime.datetime(int(date_flight[0:4]), int(date_flight[4:6]), int(date_flight[6::]), 0, 0, 0)
-    ts_base_date = ts_base_date.replace(tzinfo=pytz.UTC)
-
-    ipath_icon = settings_in['ipath_icon_base'] + ts_base_date.strftime('%Y%m%d')
-    if not (os.path.isdir(ipath_icon)):
-        print('WARNING: No ICON data for day: '+date_flight)
-        continue
-
-    # Check if there was a flight at that day
-    days = []
-    for ts in plane_time:
-            days.append(ts.date() != ts_base_date.date())
-    if all(days):
-        print('WARNING: No ACLOUD data for day: '+date_flight)
-        continue
-
-
-    # import plane data and find the necessary ICON files
-    plane_data = ImportPlane(ts_base_date, settings_in['plane_file'], ipath_icon, settings_in['icon_file_string'])
-
-    # import ICON data
-    in_data = ImportICON(settings_in['var_icon'], plane_data, ts_base_date, settings_in['opath'], settings_in['num_sample'])
-
-    DataOutNetcdf(date_flight, ts_base_date, plane_data, in_data)
-
-exit('FINISH: icon_plane_trajectory.py')
+input_data = ImportData(settings['plane_file'], settings['icon_path'], settings['icon_file_base_string'],
+                        settings['icon_grid_file'])
+ProcessData(input_data)
